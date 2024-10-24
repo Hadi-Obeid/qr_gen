@@ -1,16 +1,7 @@
-from enum import Enum
-
-class QREncoding(Enum):
-    # Values correspond to QR mode indicators in binary
-    # e.g
-    NUMERIC = 0b0001
-    ALPHA = 0b0010
-    BYTE = 0b0100
-    KANJI = 0b1000
-    ECI = 0b0111
+from character_capacity import *
 
 alphanumeric = {x:i for i, x in enumerate([*"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"])}
-print(alphanumeric)
+#print(alphanumeric)
 
 def get_char_count_bits(version, encoding):
     if version < 1 or version > 40:
@@ -41,8 +32,24 @@ def get_char_count_bits(version, encoding):
                 return 12
 
 class QRCode:
-    def __init__(self, encoding = QREncoding.ALPHA, quality = "Q", version = 1):
+    def __init__(self, encoding = QREncoding.ALPHA, quality = "Q", version = 1, message=""):
         self.encoding = encoding
         self.quality = quality
         self.version = version
         self.char_count_bits = get_char_count_bits(self.version, self.encoding)
+
+        # Get max capacity of message from args
+        # If message len > max len raise error
+        self.message_capacity = char_capacity[(self.version, self.quality, self.encoding)]
+        if len(message) > self.message_capacity:
+            raise ValueError("Chosen message exceeds QR code capacity")
+        
+        # Encode message in to binary
+        if self.encoding == QREncoding.ALPHA:
+            message = message.upper()
+        else:
+            raise NotImplementedError("Only alphanumeric messages can be suppored")
+
+    
+qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO, WORLD")
+
