@@ -1,4 +1,5 @@
 from character_capacity import *
+from itertools import zip_longest
 
 alphanumeric = {x:i for i, x in enumerate([*"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"])}
 #print(alphanumeric)
@@ -31,25 +32,39 @@ def get_char_count_bits(version, encoding):
             else:
                 return 12
 
+def alphanumeric_coding(message):
+    out = []
+    for pair in zip_longest(message[0::2], message[1::2]):
+        if pair[1] is None:
+            out.append(format(alphanumeric[pair[0]], "06b"))
+        else:
+            out.append(format((45 * alphanumeric[pair[0]]) + alphanumeric[pair[1]], "011b"))
+    return out
+
 class QRCode:
     def __init__(self, encoding = QREncoding.ALPHA, quality = "Q", version = 1, message=""):
         self.encoding = encoding
         self.quality = quality
         self.version = version
         self.char_count_bits = get_char_count_bits(self.version, self.encoding)
+        self.data = ""
 
         # Get max capacity of message from args
         # If message len > max len raise error
         self.message_capacity = char_capacity[(self.version, self.quality, self.encoding)]
         if len(message) > self.message_capacity:
             raise ValueError("Chosen message exceeds QR code capacity")
-        
+
+        self.data += format(self.encoding.value, "04b")
         # Encode message in to binary
         if self.encoding == QREncoding.ALPHA:
             message = message.upper()
-        else:
-            raise NotImplementedError("Only alphanumeric messages can be suppored")
+            self.data += format(len(message), f"0{self.char_count_bits}b")
+            self.data += ''.join(alphanumeric_coding(message))
+        print(self.data)
+        print(len(self.data))
+
 
     
-qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO, WORLD")
+qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO WORLD")
 
