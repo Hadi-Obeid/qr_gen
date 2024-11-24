@@ -4,6 +4,7 @@ from itertools import zip_longest
 alphanumeric = {x:i for i, x in enumerate([*"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"])}
 #print(alphanumeric)
 
+
 def get_char_count_bits(version, encoding):
     if version < 1 or version > 40:
         raise ValueError("ERROR: QR Version must be between 1 and 40!")
@@ -61,8 +62,20 @@ class QRCode:
             message = message.upper()
             self.data += format(len(message), f"0{self.char_count_bits}b")
             self.data += ''.join(alphanumeric_coding(message))
-        print(self.data)
-        print(len(self.data))
+
+        max_codewords = error_correction[(self.version, self.quality)]["total-codewords"]
+        max_bits = max_codewords * 8
+        # Add terminator (up to 4 0s)
+        self.data += "0" * clamp(0, 4, max_bits - len(self.data))
+
+        # Pad with zeros until multiple of 8
+        self.data += "0" * (8 - len(self.data) % 8)
+
+        # Add pad byte pattern 11101100 00010001
+        remaining_bytes = (max_bits - len(self.data)) // 8
+        for i in range(0, remaining_bytes):
+            self.data += ("11101100", "00010001")[i % 2]
+
 
 
     
