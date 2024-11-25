@@ -1,6 +1,8 @@
 from enum import Enum
 import csv
+import re
 
+from galois_field import GF
 
 class QREncoding(Enum):
     # Values correspond to QR mode indicators in binary

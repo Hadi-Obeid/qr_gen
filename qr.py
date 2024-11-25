@@ -42,6 +42,7 @@ def alphanumeric_coding(message):
             out.append(format((45 * alphanumeric[pair[0]]) + alphanumeric[pair[1]], "011b"))
     return out
 
+
 class QRCode:
     def __init__(self, encoding = QREncoding.ALPHA, quality = "Q", version = 1, message=""):
         self.encoding = encoding
@@ -75,9 +76,33 @@ class QRCode:
         remaining_bytes = (max_bits - len(self.data)) // 8
         for i in range(0, remaining_bytes):
             self.data += ("11101100", "00010001")[i % 2]
+        
+        if self.version == 5 and self.quality == "Q":
+            self.data = '0100001101010101010001101000011001010111001001100101010111000010011101110011001000000110000100100000011001100111001001101111011011110110010000100000011101110110100001101111001000000111001001100101011000010110110001101100011110010010000001101011011011100110111101110111011100110010000001110111011010000110010101110010011001010010000001101000011010010111001100100000011101000110111101110111011001010110110000100000011010010111001100101110000011101100000100011110110000010001111011000001000111101100'
+
+        # Use regex to break down codewords into chunks of 8 bytes
+        codewords = re.findall(r"." * 8 + r"?", self.data)
+
+        # Break down message into groups and blocks
+        group_1_blocks = error_correction[(self.version, self.quality)]["num-blocks-group-1"]
+        group_2_blocks = error_correction[(self.version, self.quality)]["num-blocks-group-2"]
+
+        group_1_codewords = error_correction[(self.version, self.quality)]["num-codewords-group-1"]
+        group_2_codewords = error_correction[(self.version, self.quality)]["num-codewords-group-2"]
+
+
+        total_group1_blocks = group_1_blocks * group_1_codewords
+        group_1 = [codewords[group_1_codewords * b : group_1_codewords * (b + 1)] for b in range(group_1_blocks)]
+        group_2 = [codewords[total_group1_blocks + group_2_codewords * b : total_group1_blocks + group_2_codewords * (b + 1)] for b in range(group_2_blocks)]
+
+
+
+        
+
 
 
 
     
-qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO WORLD")
+#qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO WORLD")
 
+qr = QRCode(QREncoding.ALPHA, "Q", 5, "HELLO WORLD")
