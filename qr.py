@@ -1,4 +1,7 @@
 from character_capacity import *
+#from galois_field import *
+from gf256 import GF256LT as gf
+
 from itertools import zip_longest
 
 alphanumeric = {x:i for i, x in enumerate([*"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"])}
@@ -43,6 +46,17 @@ def alphanumeric_coding(message):
     return out
 
 
+def multiplyPolynomial(p1, p2):
+    p3 = [gf(0)] * (len(p1 + p2) - 1) 
+    # Polynomial multiplication
+    # E.g (x + 1)(x + 2) = x**2 + (2+1)x + 2
+    for i, t1 in enumerate(p1):
+        for j, t2 in enumerate(p2):
+            # Use exponent property to add powers 
+            n = i + j
+            p3[n] += (t1 * t2)
+    return p3
+
 class QRCode:
     def __init__(self, encoding = QREncoding.ALPHA, quality = "Q", version = 1, message=""):
         self.encoding = encoding
@@ -77,23 +91,35 @@ class QRCode:
         for i in range(0, remaining_bytes):
             self.data += ("11101100", "00010001")[i % 2]
         
-        if self.version == 5 and self.quality == "Q":
-            self.data = '0100001101010101010001101000011001010111001001100101010111000010011101110011001000000110000100100000011001100111001001101111011011110110010000100000011101110110100001101111001000000111001001100101011000010110110001101100011110010010000001101011011011100110111101110111011100110010000001110111011010000110010101110010011001010010000001101000011010010111001100100000011101000110111101110111011001010110110000100000011010010111001100101110000011101100000100011110110000010001111011000001000111101100'
+
+        #if self.version == 5 and self.quality == "Q":
+        #    pass
+        #    self.data = '0100001101010101010001101000011001010111001001100101010111000010011101110011001000000110000100100000011001100111001001101111011011110110010000100000011101110110100001101111001000000111001001100101011000010110110001101100011110010010000001101011011011100110111101110111011100110010000001110111011010000110010101110010011001010010000001101000011010010111001100100000011101000110111101110111011001010110110000100000011010010111001100101110000011101100000100011110110000010001111011000001000111101100'
 
         # Use regex to break down codewords into chunks of 8 bytes
         codewords = re.findall(r"." * 8 + r"?", self.data)
 
         # Break down message into groups and blocks
-        group_1_blocks = error_correction[(self.version, self.quality)]["num-blocks-group-1"]
-        group_2_blocks = error_correction[(self.version, self.quality)]["num-blocks-group-2"]
+        ec = error_correction[(self.version, self.quality)]
 
-        group_1_codewords = error_correction[(self.version, self.quality)]["num-codewords-group-1"]
-        group_2_codewords = error_correction[(self.version, self.quality)]["num-codewords-group-2"]
+        group_1_blocks = ec["num-blocks-group-1"]
+        group_2_blocks = ec["num-blocks-group-2"]
 
+        group_1_codewords = ec["num-codewords-group-1"]
+        group_2_codewords = ec["num-codewords-group-2"]
 
         total_group1_blocks = group_1_blocks * group_1_codewords
         group_1 = [codewords[group_1_codewords * b : group_1_codewords * (b + 1)] for b in range(group_1_blocks)]
         group_2 = [codewords[total_group1_blocks + group_2_codewords * b : total_group1_blocks + group_2_codewords * (b + 1)] for b in range(group_2_blocks)]
+
+        self.gen_polynomial = [gf(1), gf(1)] # (x + a0)
+        for i in range(1, ec["ec-codewords-per-block"]):
+            self.gen_polynomial = multiplyPolynomial(self.gen_polynomial, [gf(1), gf(2) ** gf(i)])
+
+        gen_poly_10 = [gf.exponentiation_table[i] for i in [0, 251, 67, 46, 61, 118, 70, 64, 94, 32, 45]]
+        print([gf.logarithm_table[int(i)-1] for i in self.gen_polynomial])
+    
+
 
 
 
@@ -105,4 +131,6 @@ class QRCode:
     
 #qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO WORLD")
 
-qr = QRCode(QREncoding.ALPHA, "Q", 5, "HELLO WORLD")
+qr = QRCode(QREncoding.ALPHA, "M", 1, "HELLO WORLD")
+
+e = gf(1)

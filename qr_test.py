@@ -66,17 +66,12 @@ def test_hello():
     # Hello world example from the thonky site
     assert qr.data == "00100000010110110000101101111000110100010111001011011100010011010100001101000000111011000001000111101100"
 
+def test_message():
+    # Generator polynomials from thonky site
+    qr = QRCode(QREncoding.ALPHA, "M", 1, "HELLO WORLD")
+    gen_poly_10 = [0, 251, 67, 46, 61, 118, 70, 64, 94, 32, 45]
+    assert [gf.logarithm_table[int(i) - 1] for i in qr.gen_polynomial] == gen_poly_10
 
-def test_gf_basic():
-    a = GF(1)
-    b = GF(2)
-    c = GF(2)
-    assert a == GF(1)
-    assert a != b
-    assert b == c
-
-def test_gf_add():
-    a = GF(1)
-    b = GF(1)
-    assert a + b == GF(0)
-    assert GF(0) + GF(1) == GF(1)
+    qr = QRCode(QREncoding.ALPHA, "H", 40, "GOODBYE WORLD")
+    gen_poly_30 = [0, 41, 173, 145, 152, 216, 31, 179, 182, 50, 48, 110, 86, 239, 96, 222, 125, 42, 173, 226, 193, 224, 130, 156, 37, 251, 216, 238, 40, 192, 180]
+    assert [gf.logarithm_table[int(i)-1] for i in qr.gen_polynomial] == gen_poly_30

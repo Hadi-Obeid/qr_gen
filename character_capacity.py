@@ -2,8 +2,6 @@ from enum import Enum
 import csv
 import re
 
-from galois_field import GF
-
 class QREncoding(Enum):
     # Values correspond to QR mode indicators in binary
     # e.g
@@ -43,7 +41,7 @@ def clamp(a, b, n):
         return b
     return n
 
+
 if __name__ == '__main__':
     for key in error_correction.keys():
         pass
-        #print(error_correction[key])

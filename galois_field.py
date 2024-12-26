@@ -3,11 +3,18 @@ import csv
 int_to_alpha = {}
 alpha_to_int = {}
 
-with open('log_antilog.csv') as csvfile:
-    reader = csv.DictReader(csvfile)
-    for row in reader:
-        int_to_alpha[int(row["int"])] = int(row["alpha"])
-        alpha_to_int[int(row["alpha"])] = int(row["int"])
+i_alpha = {}
+alpha_i = {}
+
+v = 0b00000001
+for i in range(0, 255):
+    print(v, format(v, "8b"))
+    i_alpha[i] = v
+    alpha_i[v] = i
+    v = v << 1
+    if v > 255:
+        v ^= 256
+        v ^= 0b00011101
 
 
 class GF():
@@ -22,7 +29,3 @@ class GF():
     
     def __add__(self, other):
         return GF(self.val ^ other.val)
-    
-
-
-print(int_to_alpha[1])
