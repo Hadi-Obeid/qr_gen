@@ -18,6 +18,12 @@ with open('character_capacity.csv') as csvfile:
         for name, member in QREncoding.__members__.items():
             char_capacity[(int(row["Version"]), row["Error Correction Level"], member)] = int(row[name])
 
+remainder_bits = {}
+with open('remainder_bits.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        remainder_bits[int(row["Version"])] = int(row["Remainder"])
+
 error_correction = {}
 with open('error_correction_table.csv') as csvfile:
     reader = csv.DictReader(csvfile)
@@ -34,6 +40,14 @@ with open('error_correction_table.csv') as csvfile:
 
         }
         
+alignment_patterns = {}
+with open('alignment_patterns') as file:
+    patterns = file.readlines()
+    for line in patterns:
+        p = [int(i) for i in line.split()]
+        alignment_patterns[p[0]] = p[1::]
+        
+
 def clamp(a, b, n):
     if n < a:
         return a
