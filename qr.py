@@ -93,6 +93,72 @@ def insert_finder(code, y, x):
     square(code, y+1, x+1, 5, "0")
     square(code, y+2, x+2, 3, "1")
 
+ec_format_bits = {"L": "01", "M": "00", "Q": "11", "H": "10"}
+
+def set_format_code(quality, mask):
+    format_str = ec_format_bits[quality] + format(mask, "03b")
+    gen_polynomial = "10100110111"
+
+    format_str += "0" * (15 - len(format_str))
+    if format_str[0] == "0":
+        format_str = format_str[1::]
+
+    while len(format_str) >= 11:
+        #print(len(format_str))
+
+        gen_padded = gen_polynomial + ("0" * (len(format_str) - len(gen_polynomial)))
+        factor = format(int(format_str, 2) ^ int(gen_padded, 2) , f"0{len(format_str)}b")
+        format_str = factor
+        if format_str[0] == "0":
+            format_str = format_str[1::]
+
+    format_str = ("0" * clamp(0, 20, (10 - len(format_str)))) + format_str
+    format_str = ec_format_bits[quality] + format(mask, "03b") + format_str
+    final = format(int(format_str, 2) ^ int('101010000010010', 2) , f"015b")
+    return final
+
+def version_information(version):
+    format_str = format(version, "06b")
+    gen_polynomial = "1111100100101"
+
+    format_str += "0" * (18 - len(format_str))
+    while format_str[0] == "0":
+        format_str = format_str[1::]
+
+
+    while len(format_str) > 12:
+        #print(len(format_str))
+
+        gen_padded = gen_polynomial + ("0" * (len(format_str) - len(gen_polynomial)))
+        factor = format(int(format_str, 2) ^ int(gen_padded, 2) , f"0{len(format_str)}b")
+        format_str = factor
+        while format_str[0] == "0":
+            format_str = format_str[1::]
+
+    format_str = ("0" * clamp(0, 20, (12 - len(format_str)))) + format_str
+    format_str = format(version, "06b") + format_str
+    return format_str
+
+def eval_row(row):
+    streak = {"0": [], "1": []}
+    count_ones = 0
+    count_zeros = 0
+    for bit in row:
+        if bit == "1":
+            streak["0"].append(count_zeros)
+            count_zeros = 0
+
+            count_ones += 1
+        elif bit == "0":
+            streak["1"].append(count_ones)
+            count_ones = 0
+
+            count_zeros += 1
+        #print(streak, row_score)
+    streak["0"].append(count_zeros)
+    streak["1"].append(count_ones)
+    return sum([i for i in map(lambda x: 3 + (x - 5) if x >= 5 else 0, (streak["0"] + streak["1"]))])
+
 class QRCode:
     def __init__(self, encoding = QREncoding.ALPHA, quality = "Q", version = 1, message=""):
         self.encoding = encoding
@@ -113,7 +179,12 @@ class QRCode:
             message = message.upper()
             self.data += format(len(message), f"0{self.char_count_bits}b")
             self.data += ''.join(alphanumeric_coding(message))
-
+        elif self.encoding == QREncoding.BYTE:
+            self.data += format(len(message), f"0{self.char_count_bits}b")
+            self.data += ''.join([format(i, "08b") for i in message.encode(encoding='iso-8859-1')])
+            print(self.data)
+        
+        #return
         max_codewords = error_correction[(self.version, self.quality)]["total-codewords"]
         max_bits = max_codewords * 8
         # Add terminator (up to 4 0s)
@@ -128,9 +199,6 @@ class QRCode:
             self.data += ("11101100", "00010001")[i % 2]
         
 
-        if self.version == 5 and self.quality == "Q":
-            pass
-            self.data = '0100001101010101010001101000011001010111001001100101010111000010011101110011001000000110000100100000011001100111001001101111011011110110010000100000011101110110100001101111001000000111001001100101011000010110110001101100011110010010000001101011011011100110111101110111011100110010000001110111011010000110010101110010011001010010000001101000011010010111001100100000011101000110111101110111011001010110110000100000011010010111001100100001000011101100000100011110110000010001111011000001000111101100'
         # Use regex to break down codewords into chunks of 8 bytes
         codewords = re.findall(r"." * 8 + r"?", self.data)
 
@@ -179,6 +247,7 @@ class QRCode:
         module_width = 17 + (self.version * 4)
         qr_code = [['*' for i in range(module_width)] for j in range(module_width)]
 
+
         # Place finder patterns
 
         insert_finder(qr_code, 0, 0)
@@ -186,20 +255,19 @@ class QRCode:
         line_v(qr_code, 0, 7, 7, "0")
 
          
-        insert_finder(qr_code, (((self.version- 1 ) * 4) + 21) - 7, 0)
-        line_h(qr_code, (((self.version- 1 ) * 4) + 21) - 8, 0, 8, "0")
-        line_v(qr_code, (((self.version- 1 ) * 4) + 21) - 7, 7, 7, "0")
+        insert_finder(qr_code, module_width - 7, 0)
+        line_h(qr_code, module_width - 8, 0, 8, "0")
+        line_v(qr_code, module_width - 7, 7, 7, "0")
 
-        insert_finder(qr_code, 0, (((self.version- 1 ) * 4) + 21) - 7)
-        line_h(qr_code, 7, (((self.version- 1 ) * 4) + 21) - 8, 8, "0")
-        line_v(qr_code, 0, (((self.version- 1 ) * 4) + 21) - 8, 7, "0")
+        insert_finder(qr_code, 0, module_width - 7)
+        line_h(qr_code, 7, module_width - 8, 8, "0")
+        line_v(qr_code, 0, module_width - 8, 7, "0")
 
         # Separators
 
 
         if self.version >= 2:
             pattern = alignment_patterns[self.version]
-            print(list(product(pattern, pattern)))
             for position in list(product(pattern, pattern)):
                 overlap = False
                 for i in range(5):
@@ -210,26 +278,218 @@ class QRCode:
                         #print(qr_code[position[0] + i - 2][position[1] + j - 2], end= ' ')
                     #print()
                 if not overlap:
-                    print(position[0], position[1])
                     square(qr_code, position[0] - 2, position[1] - 2, 5, "1")
                     square(qr_code, position[0] - 1, position[1] - 1, 3, "0")
                     square(qr_code, position[0], position[1], 1, "1")
                 #print()
+        
+        # Reserved areas
+        line_h(qr_code, 8, 0, 9, "2")
+        line_v(qr_code, 0, 8, 8, "2")
 
+        line_v(qr_code, module_width - 7, 8, 7, "2")
+
+        line_h(qr_code, 8, module_width - 8, 8, "2")
+
+        # Dark spot on bottom left finder
+        qr_code[module_width - 8][8] = "1"
+
+        # Timing pattern
+        for y in range(8, module_width - 8):
+            if y % 2 == 0:
+                qr_code[y][6] = "1" # 1
+            else:
+                qr_code[y][6] = "0" # 0
+
+        for x in range(8, module_width - 8):
+            if x % 2 == 0:
+                qr_code[6][x] = "1" # 1
+            else:
+                qr_code[6][x] = "0" # 0
+
+        # Reserved version info area for version >= 7
+        if self.version >= 7:
+            version_info = version_information(self.version)[::-1]
+            offset = module_width - 11
+            for i in range(0, 6):
+                for j in range(3):
+                    qr_code[j + offset][i] = version_info[j + (i*3)]
+                    qr_code[i][j + offset] = version_info[j + (i*3)]
+
+        #print(interleaved_data)
+
+        #data_up = True
+        data_i = 0
+        data_y = module_width - 1
+        data_x = module_width - 1
+        data_up = True
+
+
+        data = ''.join(interleaved_data)
+        mask = {}
+
+        while True:
+            try:                
+
+                if data_x == 6:
+                    data_x = 5
+                    data_y = 9
+                    data_up = False
+                bit = data[data_i]
+                if qr_code[data_y][data_x] == "*":
+                    qr_code[data_y][data_x] = bit
+                    mask[(data_y, data_x)] = True
+                    data_i += 1
+
+                if data_up:
+                    if data_x > 6:
+                        if data_x % 2 == 0:
+                            data_x -= 1
+                        else:
+                            data_x += 1
+                            data_y -= 1
+                    else:
+                        if data_x % 2 == 0:
+                            data_x += 1
+                            data_y -= 1
+                        else:
+                            data_x -= 1
+
+
+                    if data_y <= -1:
+                        data_y += 1
+                        data_x -= 2
+                        data_up = False
+
+                else:
+                    if data_x > 6:
+                        if data_x % 2 == 0:
+                            data_x -= 1
+                        else:
+                            data_x += 1
+                            data_y += 1
+                    else:
+                        if data_x % 2 == 0:
+                            data_x += 1
+                            data_y += 1
+                        else:
+                            data_x -= 1
+
+                    if data_y >= module_width:
+                        data_y -= 1
+                        data_x -= 2
+                        data_up = True
+            except IndexError:
+                break
+
+
+        penalties = {}
+        for mask_pattern in range(6):
+            mask_pattern = 0
+            format_code = set_format_code(self.quality, mask_pattern)
+            code = copy.deepcopy(qr_code)
+            for i in range(6):
+                code[8][i] = format_code[i]
+                code[i][8] = format_code[len(format_code) - 1 - i]
+            for i in range(6,8):
+                code[8][i+1] = format_code[i]
+
+            for i in range(8):
+                code[8][module_width - 8 + i] = format_code[7 + i]
+            
+            for i in range(7):
+                code[module_width - 1 - i][8] = format_code[i]
+            code[7][8] = format_code[8]
+            
+            #line_h(qr_code, 8, 0, 9, "2")
+            for e in mask:
+                row = e[0]
+                col = e[1]
+                bit = code[row][col]
+                flip = "1" if bit == "0" else "0"
+                # Match 6
+                match mask_pattern:
+                    case 0:
+                        if ((row + col) % 2) == 0:
+                            code[e[0]][e[1]] = flip
+                    case 1:
+                        if (row % 2) == 0:
+                            code[e[0]][e[1]] = flip
+                    case 2:
+                        if (col % 3) == 0:
+                            code[e[0]][e[1]] = flip
+                    case 3:
+                        if ((row + col) % 3) == 0:
+                            code[e[0]][e[1]] = flip
+                    case 4:
+                        if (((row // 2) + (col // 3)) % 2) == 0:
+                            code[e[0]][e[1]] = flip
+                    case 5:
+                        if ( ((row * col) % 2) + ((row * col) % 3)) == 0:
+                            code[e[0]][e[1]] = flip
+                    case 6:
+                        if ((((row * col) % 2) + (((row * col) % 3))) % 2 == 0):
+                            code[e[0]][e[1]] = flip
+                    case 7:
+                        if ((((row + col) % 2) + ((row * col) % 3)) % 2) == 0: 
+                            code[e[0]][e[1]] = flip
+                
+
+            # Evaluate the code
+            code_rotated = [[qr_code[y][x] for y in range(module_width)] for x in range(module_width)]
+
+            # Condition 1
+            penalty_1 = sum([eval_row(row) for row in code_rotated]) + sum([eval_row(row) for row in qr_code])
+
+            # Condition 2
+            penalty_2 = 0
+            for y in range(0, module_width - 1):
+                for x in range(0, module_width -1):
+                    data_square = code[y][x] + code[y+1][x] + code[y][x+1] + code[y+1][x+1]
+                    if data_square == "0000" or data_square == "1111":
+                        penalty_2 += 3
+
+            # Condition 3
+            penalty_3 = 0
+            # Count for specific occurence of pattern
+            for i in range(module_width):
+                row = ''.join(code[i])
+                row_r = ''.join(code_rotated[i])
+                penalty_3 += (row_r.count('10111010000') + row.count('10111010000')) * 40
+                penalty_3 += (row_r.count('00001011101') + row.count('00001011101')) * 40
+
+            total_modules = module_width * module_width
+            total_black = sum([''.join(row).count("1") for row in qr_code])
+            percent = round((total_black / total_modules) * 100.)
+            # Previous and next multiples of 5 using floor division and modulo
+            previous_5 = 5 * (percent // 5)
+            next_5 = previous_5 + 5
+            penalty_4 = 10 * min(abs(50 - previous_5) // 5, abs(50 - next_5) // 5)
+            penalty_score = penalty_1 + penalty_2 + penalty_3 + penalty_4
+            penalties[penalty_score] = code
+        qr_code = penalties[min(penalties.keys())]
+        print(colorama.Back.WHITE + '\n' * 10)
         for row in qr_code:
+            print('\t' * 5, end='')
             for c in row:
                 if c == "1":
-                    print(colorama.Fore.GREEN + c, end='')
+                    print(colorama.Back.BLACK + ' ' * 2, end='')
                 elif c == "0":
-                    print(colorama.Fore.WHITE + c, end='')
+                    print(colorama.Back.WHITE + ' ' * 2, end='')
+                elif c == "2":
+                    print(colorama.Back.BLUE + ' ' * 2, end='')
                 else:
-                    print("*", end="")
-                print(colorama.Fore.RESET + ' ', end='')
+                    print(colorama.Back.RED + c , end="")
+                print(colorama.Back.WHITE + '', end='')
             print()
+        '    '
+        print(colorama.Back.WHITE + '\n\n\n\n')
+        print(colorama.Back.RESET + '\n\n\n\n')
+
         #print(''.join(interleaved_data))
         #print(remainder_bits[5])
 
 
 #qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO WORLD")
 
-qr = QRCode(QREncoding.ALPHA, "Q", 15, "HELLO WORLD")
+qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO WORLD")

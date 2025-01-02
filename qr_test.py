@@ -75,3 +75,13 @@ def test_message():
     qr = QRCode(QREncoding.ALPHA, "H", 40, "GOODBYE WORLD")
     gen_poly_30 = [0, 41, 173, 145, 152, 216, 31, 179, 182, 50, 48, 110, 86, 239, 96, 222, 125, 42, 173, 226, 193, 224, 130, 156, 37, 251, 216, 238, 40, 192, 180]
     assert [gf.logarithm_table[int(i)-1] for i in qr.gen_polynomial] == gen_poly_30
+
+def test_format_code():
+    assert set_format_code("H", 7) == '000100000111011'
+    assert set_format_code("M", 0) == '101010000010010'
+    assert set_format_code("L", 4) == '110011000101111'
+    assert set_format_code("Q", 2) == '011111100110001'
+
+    assert version_information(7) == "000111110010010100"
+    assert version_information(25) == "011001000111100001"
+    assert version_information(40) == "101000110001101001"
