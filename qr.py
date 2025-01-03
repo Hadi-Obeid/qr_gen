@@ -1,10 +1,15 @@
 from character_capacity import *
 #from galois_field import *
 from gf256 import GF256LT as gf
+from PIL import Image, ImageDraw
 import colorama
+import random
 
 from itertools import zip_longest, chain, product
 import copy
+
+# For the png image
+QR_MODULE_WIDTH = 10
 
 alphanumeric = {x:i for i, x in enumerate([*"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"])}
 
@@ -104,7 +109,6 @@ def set_format_code(quality, mask):
         format_str = format_str[1::]
 
     while len(format_str) >= 11:
-        #print(len(format_str))
 
         gen_padded = gen_polynomial + ("0" * (len(format_str) - len(gen_polynomial)))
         factor = format(int(format_str, 2) ^ int(gen_padded, 2) , f"0{len(format_str)}b")
@@ -127,7 +131,6 @@ def version_information(version):
 
 
     while len(format_str) > 12:
-        #print(len(format_str))
 
         gen_padded = gen_polynomial + ("0" * (len(format_str) - len(gen_polynomial)))
         factor = format(int(format_str, 2) ^ int(gen_padded, 2) , f"0{len(format_str)}b")
@@ -154,7 +157,6 @@ def eval_row(row):
             count_ones = 0
 
             count_zeros += 1
-        #print(streak, row_score)
     streak["0"].append(count_zeros)
     streak["1"].append(count_ones)
     return sum([i for i in map(lambda x: 3 + (x - 5) if x >= 5 else 0, (streak["0"] + streak["1"]))])
@@ -182,7 +184,6 @@ class QRCode:
         elif self.encoding == QREncoding.BYTE:
             self.data += format(len(message), f"0{self.char_count_bits}b")
             self.data += ''.join([format(i, "08b") for i in message.encode(encoding='iso-8859-1')])
-            print(self.data)
         
         #return
         max_codewords = error_correction[(self.version, self.quality)]["total-codewords"]
@@ -329,63 +330,62 @@ class QRCode:
         mask = {}
 
         while True:
-            try:                
+            if data_x == 6:
+                data_x = 5
+                data_y = 9
+                data_up = False
 
-                if data_x == 6:
-                    data_x = 5
-                    data_y = 9
-                    data_up = False
-                bit = data[data_i]
-                if qr_code[data_y][data_x] == "*":
-                    qr_code[data_y][data_x] = bit
-                    mask[(data_y, data_x)] = True
-                    data_i += 1
-
-                if data_up:
-                    if data_x > 6:
-                        if data_x % 2 == 0:
-                            data_x -= 1
-                        else:
-                            data_x += 1
-                            data_y -= 1
-                    else:
-                        if data_x % 2 == 0:
-                            data_x += 1
-                            data_y -= 1
-                        else:
-                            data_x -= 1
-
-
-                    if data_y <= -1:
-                        data_y += 1
-                        data_x -= 2
-                        data_up = False
-
-                else:
-                    if data_x > 6:
-                        if data_x % 2 == 0:
-                            data_x -= 1
-                        else:
-                            data_x += 1
-                            data_y += 1
-                    else:
-                        if data_x % 2 == 0:
-                            data_x += 1
-                            data_y += 1
-                        else:
-                            data_x -= 1
-
-                    if data_y >= module_width:
-                        data_y -= 1
-                        data_x -= 2
-                        data_up = True
-            except IndexError:
+            if data_i >= len(data):
                 break
+
+            bit = data[data_i]
+            if qr_code[data_y][data_x] == "*":
+                qr_code[data_y][data_x] = bit
+                mask[(data_y, data_x)] = True
+                data_i += 1
+
+            if data_up:
+                if data_x > 6:
+                    if data_x % 2 == 0:
+                        data_x -= 1
+                    else:
+                        data_x += 1
+                        data_y -= 1
+                else:
+                    if data_x % 2 == 0:
+                        data_x += 1
+                        data_y -= 1
+                    else:
+                        data_x -= 1
+
+
+                if data_y <= -1:
+                    data_y += 1
+                    data_x -= 2
+                    data_up = False
+
+            else:
+                if data_x > 6:
+                    if data_x % 2 == 0:
+                        data_x -= 1
+                    else:
+                        data_x += 1
+                        data_y += 1
+                else:
+                    if data_x % 2 == 0:
+                        data_x += 1
+                        data_y += 1
+                    else:
+                        data_x -= 1
+
+                if data_y >= module_width:
+                    data_y -= 1
+                    data_x -= 2
+                    data_up = True
 
 
         penalties = {}
         for mask_pattern in range(6):
-            mask_pattern = 0
             format_code = set_format_code(self.quality, mask_pattern)
             code = copy.deepcopy(qr_code)
             for i in range(6):
@@ -436,10 +436,10 @@ class QRCode:
                 
 
             # Evaluate the code
-            code_rotated = [[qr_code[y][x] for y in range(module_width)] for x in range(module_width)]
+            code_rotated = [[code[y][x] for y in range(module_width)] for x in range(module_width)]
 
             # Condition 1
-            penalty_1 = sum([eval_row(row) for row in code_rotated]) + sum([eval_row(row) for row in qr_code])
+            penalty_1 = sum([eval_row(row) for row in code_rotated]) + sum([eval_row(row) for row in code])
 
             # Condition 2
             penalty_2 = 0
@@ -467,9 +467,11 @@ class QRCode:
             penalty_4 = 10 * min(abs(50 - previous_5) // 5, abs(50 - next_5) // 5)
             penalty_score = penalty_1 + penalty_2 + penalty_3 + penalty_4
             penalties[penalty_score] = code
-        qr_code = penalties[min(penalties.keys())]
+        self.qr_code = penalties[min(penalties.keys())]
+
+    def print_code(self):
         print(colorama.Back.WHITE + '\n' * 10)
-        for row in qr_code:
+        for row in self.qr_code:
             print('\t' * 5, end='')
             for c in row:
                 if c == "1":
@@ -485,11 +487,27 @@ class QRCode:
         '    '
         print(colorama.Back.WHITE + '\n\n\n\n')
         print(colorama.Back.RESET + '\n\n\n\n')
-
         #print(''.join(interleaved_data))
         #print(remainder_bits[5])
 
-
+ 
 #qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO WORLD")
 
-qr = QRCode(QREncoding.ALPHA, "Q", 1, "HELLO WORLD")
+
+q = QRCode(QREncoding.BYTE, "Q", 40, "hello")
+"""
+if __name__ == `__main__`:
+    version = 10
+    qr = QRCode(QREncoding.BYTE, "L", version, "https://www.youtube.com/watch?v=hkGdXFHX8Wg")
+
+    qr_img = Image.new("L", (QR_MODULE_WIDTH * (25 + (version * 4)), QR_MODULE_WIDTH * (25 + (version * 4))), color = 255)
+    img_writer = ImageDraw.Draw(qr_img)
+    code = qr.qr_code
+    for y, row in enumerate(code):
+        for x, bit in enumerate(row):
+            y_pos = (y + 4) * QR_MODULE_WIDTH
+            x_pos = (x + 4) * QR_MODULE_WIDTH
+            color = 255 if bit == "0" else 0
+            img_writer.rectangle([(x_pos, y_pos), (x_pos + QR_MODULE_WIDTH, y_pos + QR_MODULE_WIDTH)], fill = color)
+    qr_img.show()
+"""
