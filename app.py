@@ -39,7 +39,7 @@ def index():
             img_file = BytesIO()
             qr_img.save(img_file, format="PNG")
             qr_bytes = img_file.getvalue()
-            qr_encoded = f'data:image/png;base64,{base64.b64encode(qr_bytes).decode('utf-8')}'
+            qr_encoded = f"data:image/png;base64,{base64.b64encode(qr_bytes).decode('utf-8')}"
             #qr_img.show()
             #img_code = Reader(bytes=img)
 
