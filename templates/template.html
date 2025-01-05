@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<html data-bs-theme="dark">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+        <link href="static/styles.css" rel="stylesheet">
+    </head>
+    <body>
+        <header class="text-center fix-top"><h1>QR Generator</h1></header>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger"> {{message}} </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <main role="main" class="container">
+            <div class="starter-template">
+                    <div class="row">
+                        <div class="col">
+                            <form method="POST">
+                                <label for="QRMessage" class="form-label">Message to Encode</label>
+                                <textarea name="message" id="QRMessage" class="form-control"></textarea>
+
+                                <label for="QRVersion" class="form-label">QR Version</label>
+                                <select name="version" id="QRVersion" class="form-control text-center">
+                                    <option value = "-1"> Auto </option>
+                                    {% for i in range(1, 41) %}
+                                        <option value = {{i}}> Version {{i}} ({{17 + (i * 4)}} X {{17 + (i * 4)}})</option>
+                                    {% endfor %}
+                                </select>
+
+                                <label for="QRErrorCorrection" class="form-label">Error Correction Level</label>
+                                <select name="ecc" id="QRErrorCorrection" class="text-center form-control">
+                                    <option value = "L"> Low </option>
+                                    <option value = "M"> Medium </option>
+                                    <option value = "H"> High </option>
+                                    <option value = "Q"> Quartile </option>
+                                </select>
+                                <br>
+                                <button class="btn btn-primary" id="QRGenButton" type="submit">Generate QR Code</button>
+
+                           </form>
+                        </div>
+                        {% block qr_img %}
+                            <div class="col">
+                                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASkAAAEpCAIAAABA+0PVAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAFHUlEQVR4nO3dMW4sNxBAQcv497+ynDoiDJrga+5W5dKOdvTAoIecn9/f37+A6/6uLwC+lPagoT1oaA8a2oOG9qChPWhoDxrag4b2oKE9aGgPGtqDhvagoT1oaA8a2oOG9qChPWhoDxrag4b2oKE9aGgPGtqDhvagoT1oaA8a2oOG9qChPWhoDxrag4b2oKE9aPy5+WE/Pz83P+6sxYvpF3/X3uvs976ovc867lPv8nHWPWhoDxrag4b2oKE9aGgPGtqDhvagcXW2vvCpc+HjU/Kbk+vjzwx86l3eY92DhvagoT1oaA8a2oOG9qChPWhoDxpTZusLxyehxye8xzen7/3Jx0fhN82/y8dZ96ChPWhoDxrag4b2oKE9aGgPGtqDxgOz9S908yT5pyfyT7PuQUN70NAeNLQHDe1BQ3vQ0B40tAcNs/UDbp4kv5h333wjPP+fdQ8a2oOG9qChPWhoDxrag4b2oKE9aDwwW396+DtkB/p8T9/lPdY9aGgPGtqDhvagoT1oaA8a2oOG9qAxZbb+9Fx4z95e8uM/tXB8t/sX3uUF6x40tAcN7UFDe9DQHjS0Bw3tQUN70Lg6W//Cvcl7js+gj4/d9z6Lf7PuQUN70NAeNLQHDe1BQ3vQ0B40tAeNn5uT0CFj3L3L+MLx9JBt5kPu8nHWPWhoDxrag4b2oKE9aGgPGtqDhvagMeVM+IX5o9WbY/fjhlzh8WPw57PuQUN70NAeNLQHDe1BQ3vQ0B40tAeNq/vWF27uJT8+Cj/+HQ550fnxzxpy8UOG9dY9aGgPGtqDhvagoT1oaA8a2oOG9qDx9pnwC/OfGfjUb37P/FH4cdY9aGgPGtqDhvagoT1oaA8a2oOG9qBh3/pXXMae4xc//5/NvnX4fNqDhvagoT1oaA8a2oOG9qChPWg8MFt3kPh/vIyF+W+Ev/lgwM3LWLDuQUN70NAeNLQHDe1BQ3vQ0B40tAeNPzc/7PgY9/jG6iFXuOfmXPjmQwif+jiBdQ8a2oOG9qChPWhoDxrag4b2oKE9aEzZt75wc1Y75Jz2+Zvuh4yn5//3Llj3oKE9aGgPGtqDhvagoT1oaA8a2oPG1dn6kA3In/p69OOeHqAPOcN/wboHDe1BQ3vQ0B40tAcN7UFDe9DQHjSungk//xT0IVPXPU+fP398jn9zF/8e6x40tAcN7UFDe9DQHjS0Bw3tQUN70Hj7fes3LaauQw5+H2LI5Ho+6x40tAcN7UFDe9DQHjS0Bw3tQUN70Lg6W18YMnXdm3cfnyYf/6mbTzU8fStvsu5BQ3vQ0B40tAcN7UFDe9DQHjS0B40ps/WFm6eF3/yFT7/Aff7kesiTBgvWPWhoDxrag4b2oKE9aGgPGtqDhvag8cBs/WnHp+SLX/j0YezHTwxYGPJtWPegoT1oaA8a2oOG9qChPWhoDxrag4bZ+gF7Q+35+/FvPhiwdxlPP4Rg3YOG9qChPWhoDxrag4b2oKE9aGgPGg/M1ofsMt4zZOx+8xT0Ic8MzP+3se5BQ3vQ0B40tAcN7UFDe9DQHjS0B40ps/Uhr8C+6eZ27IX5r30/vs3cvnX4atqDhvagoT1oaA8a2oOG9qChPWj8zN/eCx/JugcN7UFDe9DQHjS0Bw3tQUN70NAeNLQHDe1BQ3vQ0B40tAcN7UFDe9DQHjS0Bw3tQUN70NAeNLQHDe1BQ3vQ0B40tAcN7UFDe9DQHjS0Bw3tQUN70NAeNLQHDe1BQ3vQ+AfT839rg5iVeQAAAABJRU5ErkJggg==" height="300" width="300">
+                                <p> Your very own QR Code will be here!</p>
+                            </div>
+                        {% endblock %}
+                        <div class="col-s">
+                        </div>
+                    </div>
+            </div>
+
+        </main>
+
+        <footer class="fixed-bottom"><h3>By <a href="https://github.com/Hadi-Obeid/qr_gen">Hadi Obeid</a></h3></footer>
+
+    </body>
+</html>
