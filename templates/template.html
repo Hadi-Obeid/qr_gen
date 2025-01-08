@@ -8,7 +8,6 @@
         <link href="static/styles.css" rel="stylesheet">
     </head>
     <body>
-        <header class="text-center fix-top"><h1>QR Generator</h1></header>
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
@@ -16,6 +15,9 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        <header class="text-center fix-top">
+            <h1>QR Generator</h1>
+        </header>
         <main role="main" class="container">
             <div class="starter-template">
                     <div class="row">
