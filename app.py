@@ -5,11 +5,17 @@ import os
 from flask import Flask, request, render_template, flash, url_for
 
 app = Flask("QR Generator")
-app.config['SECRET_KEY'] = os.urandom(1239)
+app.config.update(
+    SECRET_KEY=os.urandom(1239),
+    SERVER_NAME="qr.hadiobeid.tr",
+    SESSION_COOKIE_NAME="qr.hadiobeid.tr",
+    SESSION_COOKIE_SAMESITE="None",
+    SESSION_COOKIE_SECURE=True
+)
 
 QR_MODULE_WIDTH = 5
 QR_QUIET_ZONE = 5
-QR_IMG_WITH = lambda version: QR_MODULE_WIDTH * ((17 + (QR_QUIET_ZONE * 2)) + (version * 4))
+QR_IMG_WIDTH = lambda version: QR_MODULE_WIDTH * ((17 + (QR_QUIET_ZONE * 2)) + (version * 4))
 
 @app.route('/', methods= ["GET", "POST"])
 def index():
@@ -27,7 +33,7 @@ def index():
         
         try:
             qr = QRCode(QREncoding.BYTE, ecc, int(version), msg)
-            qr_img = Image.new("L", (QR_IMG_WITH(int(version)), QR_IMG_WITH(int(version))), color = 255)
+            qr_img = Image.new("L", (QR_IMG_WIDTH(int(version)), QR_IMG_WIDTH(int(version))), color = 255)
             img_writer = ImageDraw.Draw(qr_img)
             code = qr.qr_code
             for y, row in enumerate(code):
@@ -48,6 +54,7 @@ def index():
             flash("Message exceeds code capacity!")
         except KeyError:
             flash("Invalid symbols in message!")
+        return render_template('index.html')
 
 
         #print(char_capacity[(version, "L", QREncoding.BYTE)])
